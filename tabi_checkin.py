@@ -25,8 +25,7 @@ def execute_automation():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=True, 
-            executable_path="/opt/render/.cache/ms-playwright/chromium-1105/chrome-linux/chrome",
+            headless=True,
             args=["--no-sandbox", "--disable-setuid-sandbox"]
         )
         context = browser.new_context(
