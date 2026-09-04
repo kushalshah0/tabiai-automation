@@ -2,7 +2,6 @@ import os
 import json
 import time
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth_sync
 
 STORAGE_FILE = os.path.join(os.path.dirname(__file__), "storage.json")
 TARGET_URL = "https://tabitoken.com"
@@ -19,9 +18,15 @@ def run_checkin():
             headless=True, 
             args=["--no-sandbox", "--disable-setuid-sandbox"]
         )
-        context = browser.new_context()
+        
+        # This native parameter removes the 'navigator.webdriver' flag completely
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
         page = context.new_page()
-        stealth_sync(page) 
+        
+        # Inject standard navigator override scripts manually
+        page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
         print("Opening target domain root to establish origin...")
         page.goto("https://tabitoken.com", wait_until="commit")
