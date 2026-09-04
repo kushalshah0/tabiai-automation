@@ -15,14 +15,13 @@ def run_checkin():
         return
 
     with sync_playwright() as p:
-        # Launch a clean, headless cloud context
         browser = p.chromium.launch(
             headless=True, 
             args=["--no-sandbox", "--disable-setuid-sandbox"]
         )
         context = browser.new_context()
         page = context.new_page()
-        stealth_sync(page) # Mask internal automation signatures
+        stealth_sync(page) 
         
         print("Opening target domain root to establish origin...")
         page.goto("https://tabitoken.com", wait_until="commit")
@@ -45,14 +44,12 @@ def run_checkin():
         time.sleep(10)
         
         try:
-            # Targeted exactly at your specific button tag
             checkin_button = page.locator('button[data-slot="button"]')
             
             if checkin_button.is_visible():
                 button_text = checkin_button.text_content().strip()
                 print(f"Target button state discovered: '{button_text}'")
                 
-                # Check if the button has the disabled attribute
                 is_disabled = checkin_button.get_attribute("disabled") is not None
                 
                 if "Checked in" in button_text or is_disabled:
@@ -61,7 +58,6 @@ def run_checkin():
                     print("Clicking Check-in target element...")
                     checkin_button.click()
                     
-                    # Track response verification metrics matching your HAR logs
                     page.wait_for_response(lambda response: "api/user/checkin" in response.url, timeout=20000)
                     print("Server confirmation acknowledged. Check-in successful!")
             else:
