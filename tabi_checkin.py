@@ -51,13 +51,12 @@ def run_checkin():
             
             if checkin_button.count() > 0:
                 button_element = checkin_button.first
-                
-                # Force the script to wait until the button is fully loaded and text is rendered
-                button_element.wait_for(state="visible", timeout=10000)
-                
-                # Fetch text content after making sure it is stable
                 button_text = button_element.text_content().strip()
-                print(f"Target button state discovered: '{button_text}'")
+                
+                if "Checked in" in button_text:
+                    print("Status: Checked In")
+                else:
+                    print("Status: Check In")
                 
                 is_disabled = (
                     button_element.get_attribute("disabled") is not None or 
@@ -67,14 +66,14 @@ def run_checkin():
                 if "Checked in" in button_text or is_disabled:
                     print("Account has already been checked in for today. Skipping interaction safely.")
                 else:
-                    print("Clicking Check-in target element...")
+                    print("Clicking \"Check In\"")
                     button_element.click()
                     
-                    # Confirm success against your intercepted API string
                     page.wait_for_response(lambda response: "api/user/checkin" in response.url, timeout=20000)
                     print("Server confirmation acknowledged. Check-in successful!")
             else:
-                print("Target action element was not found in the DOM hierarchy.")
+                print("Target action element button tag was not found in the DOM hierarchy.")
+                
         except Exception as e:
             print(f"Automation execution exception encountered: {e}")
         finally:
