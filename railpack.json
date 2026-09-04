@@ -1,0 +1,7 @@
+{
+  "$schema": "https://railpack.com",
+  "provider": "python",
+  "deploy": {
+    "startCommand": "python tabi_checkin.py"
+  }
+}
