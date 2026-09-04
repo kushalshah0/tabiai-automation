@@ -1,9 +1,0 @@
-{
-  "$schema": "https://railpack.com",
-  "build": {
-    "builder": "nixpacks"
-  },
-  "deploy": {
-    "startCommand": "python tabi_checkin.py"
-  }
-}
