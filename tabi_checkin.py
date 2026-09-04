@@ -23,8 +23,6 @@ def run_checkin():
             user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         )
         page = context.new_page()
-        
-        # Inject standard navigator override scripts manually to bypass automation detection
         page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
         print("Opening target domain root to establish origin...")
@@ -48,21 +46,23 @@ def run_checkin():
         time.sleep(10)
         
         try:
-            # Using the strict CSS path matching both your state fragments across shadow DOM boundaries
+            # Locate the exact check-in button by its data-slot attribute
             checkin_button = page.locator('button[data-slot="button"]')
             
-            # Fallback check if the main layout is wrapped inside a deep card body
-            if checkin_button.count() == 0:
-                checkin_button = page.locator('button:has-text("Check in"), button:has-text("Checked in")')
-
             if checkin_button.count() > 0:
-                # Target the first matching button element
                 button_element = checkin_button.first
+                
+                # Force the script to wait until the button is fully loaded and text is rendered
+                button_element.wait_for(state="visible", timeout=10000)
+                
+                # Fetch text content after making sure it is stable
                 button_text = button_element.text_content().strip()
                 print(f"Target button state discovered: '{button_text}'")
                 
-                # Verify if the element has your specific 'disabled' attribute block
-                is_disabled = button_element.get_attribute("disabled") is not None or button_element.get_attribute("data-disabled") is not None
+                is_disabled = (
+                    button_element.get_attribute("disabled") is not None or 
+                    button_element.get_attribute("data-disabled") is not None
+                )
                 
                 if "Checked in" in button_text or is_disabled:
                     print("Account has already been checked in for today. Skipping interaction safely.")
@@ -70,7 +70,7 @@ def run_checkin():
                     print("Clicking Check-in target element...")
                     button_element.click()
                     
-                    # Wait for network completion tracking verification matching HAR logs
+                    # Confirm success against your intercepted API string
                     page.wait_for_response(lambda response: "api/user/checkin" in response.url, timeout=20000)
                     print("Server confirmation acknowledged. Check-in successful!")
             else:
