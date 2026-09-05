@@ -10,7 +10,7 @@ app = Flask(__name__)
 STORAGE_FILE = os.path.join(os.path.dirname(__file__), "storage.json")
 TARGET_URL = "https://tabitoken.com"
 
-# Change this string to a random secret phrase to secure your endpoint!
+# Your random secret phrase securing the endpoint configuration
 SECRET_TOKEN = "nepal_tabi_secure_trigger_9981" 
 
 def log(message):
@@ -25,7 +25,7 @@ def execute_automation():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=True,
+            headless=True, 
             args=["--no-sandbox", "--disable-setuid-sandbox"]
         )
         context = browser.new_context(
@@ -34,7 +34,10 @@ def execute_automation():
         page = context.new_page()
         page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
+        log("Opening target domain root to establish origin...")
         page.goto("https://tabitoken.com", wait_until="commit")
+        
+        log("Injecting authentication tokens into LocalStorage...")
         with open(STORAGE_FILE, "r") as f:
             storage_data = json.load(f)
             
@@ -45,15 +48,22 @@ def execute_automation():
             }}
         }}""", storage_data)
         
+        log("Loading user profile layout...")
         page.goto(TARGET_URL, wait_until="networkidle")
-        time.sleep(10) # Turnstile synchronization buffer
+        
+        log("Waiting 10 seconds for Cloudflare Turnstile completion...")
+        time.sleep(10)
         
         try:
             checkin_button = page.locator('button[data-slot="button"]')
             if checkin_button.count() > 0:
                 button_element = checkin_button.first
                 button_text = button_element.text_content().strip()
-                log(f"Status discovered: '{button_text}'")
+                
+                if "Checked in" in button_text:
+                    log("Status: Checked In")
+                else:
+                    log("Status: Check In")
                 
                 is_disabled = (
                     button_element.get_attribute("disabled") is not None or 
@@ -66,16 +76,22 @@ def execute_automation():
                     log("Clicking \"Check In\"")
                     button_element.click()
                     
-                    # Direct check step matching your log layout requirements
+                    # Short buffer pause to let backend API processes run
                     time.sleep(5)
-                    updated_text = button_element.text_content().strip()
-                    if "Checked in" in updated_text:
+                    
+                    try:
+                        log("Waiting for network API response confirmation...")
+                        page.wait_for_response(lambda response: "api/user/checkin" in response.url, timeout=5000)
                         return "Server confirmation acknowledged. Check-in successful!"
-                    else:
-                        page.wait_for_response(lambda response: "api/user/checkin" in response.url, timeout=10000)
-                        return "Server confirmation acknowledged. Check-in successful!"
+                    except Exception:
+                        # Fallback step: read the text on the button to check if the layout text changed to "Checked in"
+                        updated_text = button_element.text_content().strip()
+                        if "Checked in" in updated_text:
+                            return "Success: Check-in completed (Verified via layout text change)!"
+                        else:
+                            return "Interaction complete: Request fired to site servers."
             else:
-                return "Error: Button element not found in DOM context."
+                return "Error: Button element not found in DOM hierarchy."
         except Exception as e:
             return f"Failed: {str(e)}"
         finally:
